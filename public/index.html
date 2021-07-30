@@ -1,6 +1,7 @@
 <html>
   <head>
     <title>Sign In</title>
+    <meta name="viewport" content="initial-scale=1.0, width=device-width" />
     <style>
       * {
         margin: 0;
@@ -23,7 +24,7 @@
         padding: 1rem 2rem;
         background: var(--primary-color);
         color: var(--foreground-color-inverted);
-        border-radius: 0.5rem;
+        border-radius: 0.25rem;
         font-weight: bold;
         font-size: 1rem;
         border: none;
@@ -56,6 +57,8 @@
       crossorigin="anonymous"
     ></script>
     <script>
+      window.authToken = '';
+
       function getQueryVariable(variable) {
         const query = window.location.search.substring(1);
         const vars = query.split('&');
@@ -79,29 +82,54 @@
         buttonElement.innerText = button;
       }
 
+      function handleFetchErrors(response) {
+        if (!response.ok) {
+            throw Error(response.statusText);
+        }
+        return response;
+      }
+
       async function startAuthFlow() {
         try {
+          const mode = getQueryVariable('mode');
           const apiKey = getQueryVariable('apiKey');
           const userId = getQueryVariable('userId');
           const redirectUrl = getQueryVariable('redirectUrl');
           const rpApiUrl = getQueryVariable('rpApiUrl');
 
+          if (!['register', 'signin'].includes(mode)) return render({ label: 'Missing query.mode (register/signin)' });
           if (!apiKey) return render({ label: 'Missing query.apiKey' });
           if (!userId) return render({ label: 'Missing query.userId' });
           if (!redirectUrl) return render({ label: 'Missing query.redirectUrl' });
           if (!rpApiUrl) return render({ label: 'Missing query.rpApiUrl' });
 
-          render({ label: 'Loading...', loading: true });
-  
           const client = new Passwordless.Client({ apiKey });
-          const token = await fetch(`${rpApiUrl}/create-token?username=${userId}`, {
-            method: 'POST',
-          }).then((response) => response.text());
 
-          render({ label: 'Authenticating...', loading: true });
-          await client.register(token);
+          if (mode === 'register') {
+            render({ label: 'Loading...', loading: true });
+            const token = await fetch(`${rpApiUrl}/passwordless/register?username=${userId}`, {
+              method: 'POST',
+            })
+              .then(handleFetchErrors)
+              .then((response) => response.text());
+  
+            render({ label: 'Registering...', loading: true });
+            await client.register(token);
+  
+            render({ label: 'Registered', button: 'Done' });
+          } else {
+            render({ label: 'Authenticating...', loading: true });
+            const token = await client.signin(userId);
+            const user = await fetch(`${rpApiUrl}/passwordless/verify?token=${token}`, {
+              method: 'POST',
+            })
+              .then(handleFetchErrors)
+              .then((response) => response.json());
 
-          render({ label: 'Authenticated!', button: 'Sign In' });
+            window.authToken = user.authToken;
+            render({ label: 'Authenticated!', button: `Continue as ${user.displayName}` });
+          }
+
         } catch (error) {
           render({ label: 'Could not authenticate...', button: 'Go Back' });
         }
@@ -109,7 +137,7 @@
 
       function redirect() {
         const redirectUrl = getQueryVariable('redirectUrl');
-        window.replace(redirectUrl);
+        window.location.replace(`${redirectUrl}?authToken=${window.authToken}&userId=${getQueryVariable('userId')}`);
       }
 
       window.addEventListener('DOMContentLoaded', startAuthFlow);
@@ -131,7 +159,7 @@
       </svg>
   
       <p id="label"></p>
-      <button id="button" style="display: none;" onclick="this.redirect">Continue</button>
+      <button id="button" style="display: none;" onclick="redirect()">Continue</button>
     </div>
   </body>
 </html>
