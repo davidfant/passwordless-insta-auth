@@ -1,0 +1,137 @@
+<html>
+  <head>
+    <title>Sign In</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+        --primary-color: #08C6F9;
+        --primary-color-darkened: #08A4F9;
+        --foreground-color: black;
+        --foreground-color-inverted: white;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        height: 100%;
+      }
+
+      button {
+        padding: 1rem 2rem;
+        background: var(--primary-color);
+        color: var(--foreground-color-inverted);
+        border-radius: 0.5rem;
+        font-weight: bold;
+        font-size: 1rem;
+        border: none;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        transition: background 0.5s;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--primary-color-darkened);
+      }
+
+      p {
+        color: var(--foreground-color);
+      }
+
+      svg {
+        color: var(--primary-color);
+      }
+
+      #container {
+        display: grid;
+        place-items: center;
+        grid-gap: 1rem;
+      }
+    </style>
+    <script
+      src="https://cdn.passwordless.dev/dist/0.0.1/passwordlessclient.min.js"
+      integrity="sha384-TPor6eIWM4IefSReNrio8zR0tr3LIHYNSwlSNKArZo42TEWTmByjkkJm/vvnUxxv"
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      function getQueryVariable(variable) {
+        const query = window.location.search.substring(1);
+        const vars = query.split('&');
+        for (let i = 0; i < vars.length; i++) {
+            const pair = vars[i].split('=');
+            if (decodeURIComponent(pair[0]) == variable) {
+                return decodeURIComponent(pair[1]);
+            }
+        }
+        return undefined;
+      }
+
+      function render({ label, loading = false, button = false }) {
+        const labelElement = document.getElementById('label');
+        const loadingElement = document.getElementById('loading');
+        const buttonElement = document.getElementById('button');
+
+        labelElement.innerText = label;
+        loadingElement.style.display = loading ? 'block' : 'none';
+        buttonElement.style.display = !!button ? 'block' : 'none';
+        buttonElement.innerText = button;
+      }
+
+      async function startAuthFlow() {
+        try {
+          const apiKey = getQueryVariable('apiKey');
+          const userId = getQueryVariable('userId');
+          const redirectUrl = getQueryVariable('redirectUrl');
+          const rpApiUrl = getQueryVariable('rpApiUrl');
+
+          if (!apiKey) render({ label: 'Missing query.apiKey' });
+          if (!userId) render({ label: 'Missing query.userId' });
+          if (!redirectUrl) render({ label: 'Missing query.redirectUrl' });
+          if (!rpApiUrl) render({ label: 'Missing query.rpApiUrl' });
+
+          render({ label: 'Loading...', loading: true });
+  
+          const client = new Passwordless.Client({ apiKey });
+          const token = await fetch(`${rpApiUrl}/create-token?username=${userId}`, {
+            method: 'POST',
+          }).then((response) => response.text());
+
+          render({ label: 'Authenticating...', loading: true });
+          await client.register(token);
+
+          render({ label: 'Authenticated!', button: 'Sign In' });
+        } catch (error) {
+          render({ label: 'Could not authenticate...', button: 'Go Back' });
+        }
+      }
+
+      function redirect() {
+        const redirectUrl = getQueryVariable('redirectUrl');
+        window.replace(redirectUrl);
+      }
+
+      window.addEventListener('DOMContentLoaded', startAuthFlow);
+    </script>
+  </head>
+  <body>
+    <div id="container">
+      <svg id="loading" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" stroke="currentColor">
+        <g fill="none" fill-rule="evenodd" stroke-width="2">
+          <circle cx="22" cy="22" r="1">
+            <animate attributeName="r" begin="0s" dur="1.8s" values="1; 20" calcMode="spline" keyTimes="0; 1" keySplines="0.165, 0.84, 0.44, 1" repeatCount="indefinite"/>
+            <animate attributeName="stroke-opacity" begin="0s" dur="1.8s" values="1; 0" calcMode="spline" keyTimes="0; 1" keySplines="0.3, 0.61, 0.355, 1" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="22" cy="22" r="1">
+            <animate attributeName="r" begin="-0.9s" dur="1.8s" values="1; 20" calcMode="spline" keyTimes="0; 1" keySplines="0.165, 0.84, 0.44, 1" repeatCount="indefinite"/>
+            <animate attributeName="stroke-opacity" begin="-0.9s" dur="1.8s" values="1; 0" calcMode="spline" keyTimes="0; 1" keySplines="0.3, 0.61, 0.355, 1" repeatCount="indefinite"/>
+          </circle>
+        </g>
+      </svg>
+  
+      <p id="label"></p>
+      <button id="button" style="display: none;" onclick="this.redirect">Continue</button>
+    </div>
+  </body>
+</html>
