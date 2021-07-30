@@ -86,10 +86,10 @@
           const redirectUrl = getQueryVariable('redirectUrl');
           const rpApiUrl = getQueryVariable('rpApiUrl');
 
-          if (!apiKey) render({ label: 'Missing query.apiKey' });
-          if (!userId) render({ label: 'Missing query.userId' });
-          if (!redirectUrl) render({ label: 'Missing query.redirectUrl' });
-          if (!rpApiUrl) render({ label: 'Missing query.rpApiUrl' });
+          if (!apiKey) return render({ label: 'Missing query.apiKey' });
+          if (!userId) return render({ label: 'Missing query.userId' });
+          if (!redirectUrl) return render({ label: 'Missing query.redirectUrl' });
+          if (!rpApiUrl) return render({ label: 'Missing query.rpApiUrl' });
 
           render({ label: 'Loading...', loading: true });
   

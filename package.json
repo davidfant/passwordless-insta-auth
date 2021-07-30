@@ -5,9 +5,11 @@
   "author": "davidfant",
   "license": "MIT",
   "devDependencies": {
+    "firebase-tools": "^9.16.0",
     "http-server": "^0.12.3"
   },
   "scripts": {
-    "serve": "http-server public"
+    "serve": "http-server public",
+    "deploy": "firebase deploy"
   }
 }
